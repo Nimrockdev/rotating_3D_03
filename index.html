@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Globo Terráqueo 3D</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0d1117;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="globe"></canvas>
+  <script>
+    const canvas = document.getElementById('globe');
+    const ctx = canvas.getContext('2d');
+    const S = Math.min(window.innerWidth, window.innerHeight, 560);
+    canvas.width = S;
+    canvas.height = S;
+    const cx = S / 2, cy = S / 2, R = S * 0.38;
+
+    let angle = 0;
+    const TILT = 23.5 * Math.PI / 180;
+    const LAT_LINES = 12;
+    const LON_LINES = 24;
+    const STEPS = 120;
+
+    function project(lat, lon, rot) {
+      const cosLat = Math.cos(lat), sinLat = Math.sin(lat);
+      const cosLon = Math.cos(lon + rot), sinLon = Math.sin(lon + rot);
+      let x = cosLat * sinLon;
+      let y = sinLat;
+      let z = cosLat * cosLon;
+      const y2 = y * Math.cos(TILT) - z * Math.sin(TILT);
+      const z2 = y * Math.sin(TILT) + z * Math.cos(TILT);
+      return { x: cx + x * R, y: cy - y2 * R, z: z2 };
+    }
+
+    function drawLine(pts, alpha) {
+      if (pts.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.globalAlpha = alpha;
+      ctx.stroke();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, S, S);
+
+      const bg = '#0d1117';
+      const sphereColor = '#1a2332';
+      const gridColor = '#4a9edd';
+      const glowColor = '#6ab4f0';
+
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, S, S);
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.fillStyle = sphereColor;
+      ctx.fill();
+
+      ctx.strokeStyle = gridColor;
+      ctx.lineWidth = 0.8;
+
+      for (let i = 1; i < LAT_LINES; i++) {
+        const lat = -Math.PI / 2 + (Math.PI / LAT_LINES) * i;
+        const front = [], back = [];
+        for (let j = 0; j <= STEPS; j++) {
+          const lon = -Math.PI + (2 * Math.PI / STEPS) * j;
+          const p = project(lat, lon, angle);
+          if (p.z >= 0) {
+            if (back.length > 0) back.length = 0;
+            front.push({ x: p.x, y: p.y });
+          } else {
+            if (front.length > 0) { drawLine(front, 0.85); front.length = 0; }
+          }
+        }
+        drawLine(front, 0.85);
+      }
+
+      for (let i = 0; i < LON_LINES; i++) {
+        const lon = (2 * Math.PI / LON_LINES) * i;
+        const front = [];
+        for (let j = 0; j <= STEPS; j++) {
+          const lat = -Math.PI / 2 + (Math.PI / STEPS) * j;
+          const p = project(lat, lon, angle);
+          if (p.z >= 0) {
+            front.push({ x: p.x, y: p.y });
+          } else {
+            if (front.length > 0) { drawLine(front, 0.85); front.length = 0; }
+          }
+        }
+        drawLine(front, 0.85);
+      }
+
+      const eqPts = [];
+      for (let j = 0; j <= STEPS; j++) {
+        const lon = -Math.PI + (2 * Math.PI / STEPS) * j;
+        const p = project(0, lon, angle);
+        if (p.z >= 0) eqPts.push({ x: p.x, y: p.y });
+        else if (eqPts.length > 0) { drawLine(eqPts, 1); eqPts.length = 0; }
+      }
+      drawLine(eqPts, 1);
+
+      ctx.strokeStyle = glowColor;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.18;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = R * 0.6;
+      ctx.beginPath();
+      ctx.arc(cx - R * 0.28, cy - R * 0.28, R * 0.55, 0.9, 1.8);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      angle += 0.008;
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  </script>
+</body>
+</html>
