@@ -2,6 +2,7 @@
 # 🌍 Rotating 3D Globe
 
 An animated 3D wireframe globe built with pure HTML5 Canvas and JavaScript — no libraries, no dependencies.
+Developed with Claude.
 
 ## Demo
 
